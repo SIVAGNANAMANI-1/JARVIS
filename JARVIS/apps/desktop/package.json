@@ -1,0 +1,26 @@
+{
+  "name": "jarvis-desktop",
+  "version": "1.0.0",
+  "description": "JARVIS AI - Windows Native Desktop Assistant with Edge Automation",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "jarvis",
+    "ai",
+    "desktop",
+    "electron",
+    "automation"
+  ],
+  "author": "JARVIS AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron-is-dev": "^3.0.1"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

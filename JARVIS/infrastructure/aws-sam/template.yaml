@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  JARVIS AI - AWS Cloud Infrastructure as Code (SAM Template)
+  Provisions Cognito Authentication, DynamoDB State Tables, S3 Artifact Storage,
+  API Gateway with JWT Authorizer, and Lambda Orchestrator with Bedrock IAM Permissions.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+    Description: Deployment target environment.
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+    Description: AWS region with Amazon Bedrock foundation model availability.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+        AWS_REGION_NAME: !Ref AwsRegion
+        DYNAMODB_TASKS_TABLE: !Ref JarvisTasksTable
+        DYNAMODB_DEVICES_TABLE: !Ref JarvisDevicesTable
+        DYNAMODB_MEMORY_TABLE: !Ref JarvisMemoryTable
+        S3_ARTIFACTS_BUCKET: !Ref JarvisArtifactsBucket
+        BEDROCK_MODEL_ID: "anthropic.claude-3-sonnet-20240229-v1:0"
+
+Resources:
+  # ==========================================
+  # 1. Amazon Cognito Identity & Auth
+  # ==========================================
+  JarvisUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "jarvis-user-pool-${Environment}"
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+  JarvisUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "jarvis-client-${Environment}"
+      UserPoolId: !Ref JarvisUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  # ==========================================
+  # 2. Amazon DynamoDB State Tables
+  # ==========================================
+  JarvisTasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "JarvisTasks-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: task_id
+          AttributeType: S
+        - AttributeName: target_device_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: task_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: TargetDeviceIndex
+          KeySchema:
+            - AttributeName: target_device_id
+              KeyType: HASH
+            - AttributeName: task_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  JarvisDevicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "JarvisDevices-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: device_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: device_id
+          KeyType: RANGE
+
+  JarvisMemoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "JarvisMemory-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: memory_id
+          KeyType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: memory_id
+          KeyType: RANGE
+
+  # ==========================================
+  # 3. Amazon S3 Artifact Storage
+  # ==========================================
+  JarvisArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "jarvis-artifacts-${AWS::AccountId}-${Environment}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ["*"]
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ["*"]
+            MaxAge: 3000
+
+  # ==========================================
+  # 4. Amazon API Gateway HTTP API
+  # ==========================================
+  JarvisHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "JarvisHttpApi-${Environment}"
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowHeaders: ["*"]
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              audience:
+                - !Ref JarvisUserPoolClient
+              issuer: !Sub "https://cognito-idp.${AwsRegion}.amazonaws.com/${JarvisUserPool}"
+
+  # ==========================================
+  # 5. AWS Lambda Cloud Orchestrator
+  # ==========================================
+  JarvisCloudOrchestratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "jarvis-cloud-orchestrator-${Environment}"
+      CodeUri: ../../services/cloud_api/
+      Handler: lambda_handler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JarvisTasksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JarvisDevicesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JarvisMemoryTable
+        - S3CrudPolicy:
+            BucketName: !Ref JarvisArtifactsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: "*"
+      Events:
+        ApiCatchAll:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref JarvisHttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  HttpApiUrl:
+    Description: "API Gateway HTTP endpoint URL"
+    Value: !Sub "https://${JarvisHttpApi}.execute-api.${AwsRegion}.amazonaws.com"
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref JarvisUserPool
+  UserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref JarvisUserPoolClient
+  S3BucketName:
+    Description: "S3 Artifacts Bucket Name"
+    Value: !Ref JarvisArtifactsBucket

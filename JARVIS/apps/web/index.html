@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="JARVIS AI — Autonomous, Voice-Enabled, Cross-Platform Personal AI Assistant with Hybrid AWS Cloud and Local Windows Edge Automation.">
+  <meta name="keywords" content="JARVIS, AI Assistant, Edge Automation, Bedrock, AWS, Cross-Device, Voice AI">
+  <title>JARVIS AI — Autonomous Digital Operator & Personal AI</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%2300f0ff'/></svg>">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="jarvis-header" role="banner">
+    <div class="brand-section">
+      <div class="logo-orb" id="logoOrb" aria-label="JARVIS Core Status"></div>
+      <div class="brand-text">
+        <h1>JARVIS AI</h1>
+        <span>Autonomous Edge & Cloud Operator</span>
+      </div>
+    </div>
+
+    <div class="header-status-group">
+      <div class="mode-badge" id="edgeStatusBadge">
+        <span class="status-dot" id="agentStatusDot"></span>
+        <span id="agentStatusText">EDGE CONNECTED (127.0.0.1:8765)</span>
+      </div>
+
+      <div class="mode-badge" id="cloudStatusBadge">
+        <span class="status-dot" style="background: var(--purple-neon); box-shadow: 0 0 8px var(--purple-neon);"></span>
+        <span id="cloudModeText">AWS SAM EMULATION</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <button class="hud-btn" id="modeToggleBtn" title="Toggle between Local Edge and Cloud API">
+        <span>🔄</span> <span id="toggleModeLabel">Mode: Local</span>
+      </button>
+      <button class="hud-btn hud-btn-danger" id="emergencyStopBtn" title="Immediately cancel any active running local task">
+        <span>🛑</span> Emergency Stop
+      </button>
+    </div>
+  </header>
+
+  <!-- Main HUD Layout Grid -->
+  <main class="jarvis-container" role="main">
+    <!-- Left Column: Device Fleet & Cross-Platform Mesh -->
+    <aside class="left-column" aria-label="Connected Device Fleet">
+      <section class="hud-card device-fleet-card">
+        <div class="card-title-bar">
+          <h2><span>💻</span> Device Mesh</h2>
+          <span class="badge-counter" id="deviceCountBadge">2 Online</span>
+        </div>
+
+        <div class="device-list" id="deviceListContainer">
+          <!-- Windows Desktop Agent -->
+          <div class="device-item active" id="device-win-desktop" data-device-id="local">
+            <div class="device-top-row">
+              <span class="device-name"><span>🖥️</span> Windows Laptop (Host)</span>
+              <span class="device-status-badge status-online">Online</span>
+            </div>
+            <div class="device-meta">
+              <span>Local Edge Agent</span>
+              <span id="hostPingLabel">Ping: 1ms</span>
+            </div>
+            <div class="device-caps">
+              <span class="cap-pill">VS Code</span>
+              <span class="cap-pill">Spotify</span>
+              <span class="cap-pill">PowerShell</span>
+              <span class="cap-pill">Browser</span>
+              <span class="cap-pill">Sandboxing</span>
+            </div>
+          </div>
+
+          <!-- Remote Android Phone -->
+          <div class="device-item" id="device-android-phone" data-device-id="phone_android_01">
+            <div class="device-top-row">
+              <span class="device-name"><span>📱</span> Android Phone</span>
+              <span class="device-status-badge status-online">Paired</span>
+            </div>
+            <div class="device-meta">
+              <span>AWS Cloud Relayed</span>
+              <span>Sync: 32ms</span>
+            </div>
+            <div class="device-caps">
+              <span class="cap-pill">Voice Mic</span>
+              <span class="cap-pill">Remote Dispatch</span>
+              <span class="cap-pill">Alerts</span>
+            </div>
+          </div>
+
+          <!-- Tablet / Web Client -->
+          <div class="device-item" id="device-web-client" data-device-id="web_client">
+            <div class="device-top-row">
+              <span class="device-name"><span>🌐</span> Web Client</span>
+              <span class="device-status-badge status-online">Active</span>
+            </div>
+            <div class="device-meta">
+              <span>Current Session</span>
+              <span>Localhost</span>
+            </div>
+            <div class="device-caps">
+              <span class="cap-pill">Web Speech</span>
+              <span class="cap-pill">HUD Visualizer</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- System Security Policy Sandboxing Info -->
+      <section class="hud-card" style="margin-top: 1rem;">
+        <div class="card-title-bar">
+          <h2><span>🛡️</span> Security Sandbox</h2>
+          <span class="badge-counter" style="color: var(--emerald-neon);">STRICT</span>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45;">
+          All code executions and generated files are isolated to approved workspace boundaries:
+        </p>
+        <div style="background: rgba(0,0,0,0.4); padding: 0.5rem; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan-neon); word-break: break-all;">
+          <code id="sandboxPathDisplay">JARVIS/workspaces/</code>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
+          <span>High-Risk Approval:</span>
+          <strong style="color: var(--amber-neon);">ENFORCED</strong>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Center Column: Core Voice Reactor, Prompt Input & Live Task Stream -->
+    <section class="center-column" aria-label="Task Execution Stream">
+      <!-- Voice Reactor Orb Card -->
+      <div class="hud-card hero-reactor-card" id="heroReactorCard">
+        <div class="orb-container" id="voiceOrbBtn" role="button" tabindex="0" title="Click or Press Space to speak to JARVIS" aria-label="Speak to JARVIS">
+          <div class="orb-ring-outer"></div>
+          <div class="orb-ring-middle"></div>
+          <div class="orb-core">
+            <div class="orb-icon" id="orbIcon">🎙️</div>
+          </div>
+        </div>
+
+        <div class="voice-status-text" id="voiceStatusText">JARVIS is listening...</div>
+        <div class="voice-subtitle" id="voiceSubtitleText">
+          Speak or type natural language instructions. JARVIS decomposes workflows, executes verified actions, and reports verified results.
+        </div>
+
+        <div class="audio-visualizer" id="audioVisualizer" aria-hidden="true">
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+        </div>
+      </div>
+
+      <!-- Command Input & Quick Preset Chips -->
+      <div class="hud-card command-input-card">
+        <form class="input-container" id="commandForm" onsubmit="return false;">
+          <span class="prompt-icon">⚡</span>
+          <input 
+            type="text" 
+            id="commandInput" 
+            class="command-input" 
+            placeholder="Ask JARVIS (e.g. 'Open VS Code and run assignment.py' or 'Play study playlist on Spotify')..." 
+            autocomplete="off"
+            aria-label="Natural Language Command Input"
+          />
+          <button type="button" class="hud-btn" id="micToggleBtn" title="Voice Input" aria-label="Toggle Microphone">
+            <span>🎤</span>
+          </button>
+          <button type="submit" class="send-btn" id="sendBtn" aria-label="Execute Command">
+            <span>Execute</span> <span>➔</span>
+          </button>
+        </form>
+
+        <!-- Suggested Prompt Chips -->
+        <div class="quick-chips-row" id="quickChipsRow">
+          <div class="quick-chip" data-cmd="go to amazon and find belts for men">
+            🛍️ Go to Amazon: Belts for Men
+          </div>
+          <div class="quick-chip" data-cmd="go to python online compiler and write hello world code">
+            💻 Python Online Compiler & Code
+          </div>
+          <div class="quick-chip" data-cmd="What is quantum computing?">
+            ❓ What is quantum computing?
+          </div>
+          <div class="quick-chip" data-cmd="What is 25 * 48?">
+            🔢 Calculate: 25 * 48
+          </div>
+          <div class="quick-chip" data-cmd="Who is Albert Einstein?">
+            🧠 Who is Albert Einstein?
+          </div>
+          <div class="quick-chip" data-cmd="Open YouTube, search for Python tutorials, and play the best matching video.">
+            📺 YouTube Python Tutorials
+          </div>
+          <div class="quick-chip" data-cmd="Open Spotify on my laptop and play my study playlist.">
+            🎵 Spotify Study Playlist
+          </div>
+          <div class="quick-chip" data-cmd="Find the attendance spreadsheet, calculate the monthly statistics, and create a report.">
+            📊 Attendance Report & Stats
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Live Task Execution Monitor -->
+      <div class="hud-card task-monitor-card">
+        <div class="card-title-bar">
+          <h2><span>🚀</span> Live Task Execution Feed</h2>
+          <span class="badge-counter" id="activeTasksCount">0 Running</span>
+        </div>
+
+        <div class="task-list-stream" id="taskListStream">
+          <!-- Populated dynamically via WebSocket / REST -->
+          <div style="text-align: center; color: var(--text-dim); padding: 3rem 1rem; font-size: 0.85rem;">
+            No tasks submitted yet. Type a command above or click a preset prompt.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Telemetry & Memory Vault -->
+    <aside class="right-column" aria-label="System Metrics and Memory">
+      <!-- Live Telemetry Card -->
+      <section class="hud-card">
+        <div class="card-title-bar">
+          <h2><span>⚡</span> Edge Telemetry</h2>
+          <span class="badge-counter" style="color: var(--cyan-neon);">LIVE</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Platform</div>
+            <div class="stat-val" id="statPlatform">Windows</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Python Agent</div>
+            <div class="stat-val" id="statPython">3.14.2</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Planner Model</div>
+            <div class="stat-val" id="statPlanner">Claude 3</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Verified Tests</div>
+            <div class="stat-val" style="color: var(--emerald-neon);">17 / 17</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Persistent Memory & User Preferences Card -->
+      <section class="hud-card memory-card">
+        <div class="card-title-bar">
+          <h2><span>🧠</span> Memory Vault</h2>
+          <span class="badge-counter" id="memoryCountBadge">0</span>
+        </div>
+
+        <!-- Add Memory Form -->
+        <div style="display: flex; gap: 0.5rem;">
+          <input 
+            type="text" 
+            id="newMemoryInput" 
+            class="command-input" 
+            placeholder="Remember preference..." 
+            style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; font-size: 0.8rem;"
+          />
+          <button class="hud-btn hud-btn-primary" id="saveMemoryBtn" style="padding: 0.4rem 0.75rem;">Save</button>
+        </div>
+
+        <!-- Memory List -->
+        <div class="memory-list" id="memoryListContainer">
+          <div style="font-size: 0.78rem; color: var(--text-dim); text-align: center; padding: 1rem 0;">
+            No user memories recorded yet.
+          </div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- High Risk Approval Modal Dialog -->
+  <div class="modal-overlay" id="approvalModal" role="dialog" aria-modal="true" aria-labelledby="approvalDialogTitle">
+    <div class="approval-dialog">
+      <div class="approval-header">
+        <div class="warning-icon">⚠️</div>
+        <div class="approval-title">
+          <h3 id="approvalDialogTitle">High-Impact Action Approval</h3>
+          <span>SECURITY POLICY ENFORCEMENT</span>
+        </div>
+      </div>
+      <div class="approval-body" id="approvalActionDetails">
+        A requested action requires your explicit authorization before execution.
+      </div>
+      <div class="approval-actions">
+        <button class="hud-btn hud-btn-danger" id="rejectApprovalBtn">Reject & Abort</button>
+        <button class="hud-btn hud-btn-primary" id="approveActionBtn">Approve & Execute</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Redirection Toast Banner -->
+  <div id="redirectToast" style="display: none; position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(13, 18, 36, 0.95); border: 2px solid var(--cyan-neon); box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); padding: 0.85rem 1.4rem; border-radius: var(--radius-md); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; align-items: center; gap: 1rem;">
+    <div style="font-size: 1.6rem; animation: pulseLogo 1.5s infinite;">🚀</div>
+    <div>
+      <div style="font-weight: 700; color: var(--cyan-neon); font-size: 0.95rem;">Redirecting to Requested Destination...</div>
+      <div id="redirectToastUrl" style="font-size: 0.78rem; color: #a0aec0; font-family: var(--font-mono); max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+    </div>
+    <div style="display: flex; gap: 0.5rem; margin-left: 0.75rem;">
+      <button class="hud-btn hud-btn-primary" id="redirectNowBtn" style="padding: 0.4rem 0.85rem; font-weight: 700;">Go Now ➔</button>
+      <button class="hud-btn" id="cancelRedirectBtn" style="padding: 0.4rem 0.85rem;">Stay</button>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="js/app.js"></script>
+</body>
+</html>
+
